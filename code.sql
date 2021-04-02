@@ -6,6 +6,8 @@ DROP TABLE IF EXISTS InfectWayDict CASCADE;
 DROP TABLE IF EXISTS InfectWayMany CASCADE;
 DROP TABLE IF EXISTS DisgWayDict CASCADE;
 DROP TABLE IF EXISTS DisgWayMany CASCADE;
+DROP TABLE IF EXISTS System_ CASCADE;
+DROP TABLE IF EXISTS InfectReg CASCADE;
 
 --TODO add "IF NOT EXISTS" to "CREATE TABLE" after get ready
 
@@ -48,19 +50,33 @@ CREATE TABLE InfectWayMany(
 );
 
 CREATE TABLE DisgWayDict(
-	ID_D				INT			PRIMARY KEY NOT NULL,
-	view_prot			INT 		NOT NULL,
-	detect_prot			INT			NOT NULL,
+	ID_D				INT				PRIMARY KEY NOT NULL,
+	view_prot			INT 			NOT NULL,
+	detect_prot			INT				NOT NULL,
 	CHECK (view_prot=0 OR view_prot=1),
 	CHECK (detect_prot=0 OR detect_prot=1)	
 );
 
 CREATE TABLE DisgWayMany(
-	ID_V				INT			NOT NULL,
-	ID_D				INT			NOT NULL,
+	ID_V				INT				NOT NULL,
+	ID_D				INT				NOT NULL,
 	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V),
 	FOREIGN KEY(ID_D) REFERENCES DisgWayDict(ID_D),
 	PRIMARY KEY (ID_V,ID_D)
+);
+
+CREATE TABLE System_(
+	ID_SYS				INT				PRIMARY KEY NOT NULL,
+	OS_type				VARCHAR(100)	NOT NULL,
+	upd_version			VARCHAR(100)	NOT NULL,
+	time_usage			VARCHAR(100)	NOT NULL,
+	cpu					VARCHAR(100)	NOT NULL,
+	gpu					VARCHAR(100)	NOT NULL,
+	ram					VARCHAR(100)	NOT NULL,
+	rom					VARCHAR(100)	NOT NULL,
+	network				VARCHAR(100)	NOT NULL,
+	mother				VARCHAR(100)	NOT NULL,
+	ueffi_bios			VARCHAR(100)	NOT NULL	
 );
 
 CREATE TABLE InfectReg(
@@ -70,6 +86,6 @@ CREATE TABLE InfectReg(
 	time_				DATE			NOT NULL,
 	damage_				VARCHAR(100)	NOT NULL,
 	user_				VARCHAR(100)	NOT NULL,
-	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V)
-	--FOREIGN KEY(ID_SYS) REFERENCES DisgW(ID_SYS)
+	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V),
+	FOREIGN KEY(ID_SYS) REFERENCES System_(ID_SYS)
 )
