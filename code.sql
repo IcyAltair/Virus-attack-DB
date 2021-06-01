@@ -227,12 +227,67 @@ VALUES
 ('Windows 8'),
 ('Windows Vista'),
 ('Windows 8.1');
+INSERT INTO OS(name_) 
+VALUES
+('Free DOS'),
+('Amiga OS'),
+('ReactOS'),
+('DOS');
 */
-
-SELECT * FROM OS
-
-
-
+--SELECT * FROM OS
+CREATE TABLE IF NOT EXISTS UpdateVersion(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO UpdateVersion(name_) 
+VALUES
+('Up to date'),
+('Stable'),
+('Beta'),
+('Custom mode'),
+('First release'),
+('Zero trust'),
+('Unknown'),
+('Unique build'),
+('With dependencies'),
+('Test release');
+*/
+--SELECT * FROM UpdateVersion
+CREATE TABLE IF NOT EXISTS CPU(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO CPU(name_) 
+VALUES
+('AMD Ryzen 5 1600'),
+('AMD Ryzen 5 2600'),
+('AMD Ryzen 5 3600'),
+('AMD Ryzen 7 1700'),
+('AMD Ryzen 7 2700'),
+('AMD Ruzen 7 3700'),
+('AMD Ryzen 7 3800'),
+('AMD Ryzen 9 3900'),
+('AMD Ryzen 9 3950'),
+('AMD Ruzen 7 3700X'),
+('AMD Ruzen 7 3800X'),
+('AMD Ryzen 9 3900X'),
+('AMD Ryzen 9 3950X'),
+('AMD Ryzen Threadripper 3960X'),
+('AMD Ryzen Threadripper 3970X'),
+('AMD Ryzen Threadripper 3990X'),
+('AMD EPYC 7232P'),
+('AMD EPYC 7302P'),
+('AMD EPYC 7402P'),
+('AMD EPYC 7502P'),
+('AMD EPYC 7252'),
+('AMD EPYC 7262'),
+('AMD EPYC 7272'),
+('AMD EPYC 7282'),
+('AMD EPYC 7352');
+*/
+--SELECT * FROM CPU
 
 
 
