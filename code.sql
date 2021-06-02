@@ -1,3 +1,37 @@
+CREATE OR REPLACE FUNCTION f_random_sample(_limit int = 1000, _gaps real = 1.03)
+  RETURNS SETOF OS
+  LANGUAGE plpgsql VOLATILE ROWS 1000 AS
+$func$
+DECLARE
+   _surplus  int := _limit * _gaps;
+   _estimate int := (           
+      SELECT c.reltuples * _gaps
+      FROM   pg_class c
+      WHERE  c.oid = 'OS'::regclass);
+BEGIN
+   RETURN QUERY
+   WITH RECURSIVE random_pick AS (
+      SELECT *
+      FROM  (
+         SELECT 1 + trunc(random() * _estimate)::int
+         FROM   generate_series(1, _surplus) g
+         LIMIT  _surplus           
+         ) r (ID_)
+      JOIN   OS USING (ID_)        
+
+      UNION                        
+      SELECT *
+      FROM  (
+         SELECT 1 + trunc(random() * _estimate)::int
+         FROM   random_pick        
+         LIMIT  _limit             
+         ) r (ID_)
+      JOIN   OS USING (ID_)        
+   )
+   TABLE  random_pick
+   LIMIT  _limit;
+END
+$func$;
 --delete "DROP TABLE" before get ready
 /*
 DROP TABLE IF EXISTS Virus CASCADE;
@@ -20,8 +54,8 @@ DROP TABLE IF EXISTS Setup CASCADE;
 CREATE TABLE IF NOT EXISTS Virus(
 	ID_V				SERIAL 			PRIMARY KEY NOT NULL,
 	name_				VARCHAR(100)	NOT NULL,
-	environment			VARCHAR(100)	NOT NULL,
-	type_of_algorithm	VARCHAR(100)	NOT NULL,
+	environment			VARCHAR(100)	,
+	type_of_algorithm	VARCHAR(100)	,
 	polymorphism		INT				NOT NULL,
 	metamorphism		INT				NOT NULL,	
 	danger_lvl			INT				NOT NULL,
@@ -36,9 +70,9 @@ CREATE TABLE IF NOT EXISTS InfectStratDict(
 );
 
 CREATE TABLE IF NOT EXISTS InfectStratMany(
-	ID_VS				INT				PRIMARY KEY NOT NULL,
-	ID_V				INT				NOT NULL,
-	ID_S				INT				NOT NULL,
+	ID_VS				SERIAL			PRIMARY KEY NOT NULL,
+	ID_V				INT				,
+	ID_S				INT				,
 	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V),
 	FOREIGN KEY(ID_S) REFERENCES InfectStratDict(ID_S)
 	--PRIMARY KEY (ID_V,ID_S)
@@ -50,9 +84,9 @@ CREATE TABLE IF NOT EXISTS InfectWayDict(
 );
 
 CREATE TABLE IF NOT EXISTS InfectWayMany(
-	ID_VI				INT				PRIMARY KEY NOT NULL,
-	ID_V				INT				NOT NULL,
-	ID_I				INT				NOT NULL,
+	ID_VI				SERIAL			PRIMARY KEY NOT NULL,
+	ID_V				INT				,
+	ID_I				INT				,
 	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V),
 	FOREIGN KEY(ID_I) REFERENCES InfectWayDict(ID_I)
 	--PRIMARY KEY (ID_V,ID_I)
@@ -64,9 +98,9 @@ CREATE TABLE IF NOT EXISTS DisgWayDict(
 );
 
 CREATE TABLE IF NOT EXISTS DisgWayMany(
-	ID_VD				INT				PRIMARY KEY NOT NULL,
-	ID_V				INT				NOT NULL,
-	ID_D				INT				NOT NULL,
+	ID_VD				SERIAL			PRIMARY KEY NOT NULL,
+	ID_V				INT				,
+	ID_D				INT				,
 	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V),
 	FOREIGN KEY(ID_D) REFERENCES DisgWayDict(ID_D)
 	--PRIMARY KEY (ID_V,ID_D)
@@ -100,36 +134,36 @@ CREATE TABLE IF NOT EXISTS Protection(
 
 CREATE TABLE IF NOT EXISTS System_(
 	ID_SYS				SERIAL				PRIMARY KEY NOT NULL,
-	ID_ARCH				INT				NOT NULL,
-	name_				VARCHAR(100)	NOT NULL,
-	OS_type				VARCHAR(100)	NOT NULL,
-	upd_version			VARCHAR(100)	NOT NULL,
-	time_usage			VARCHAR(100)	NOT NULL,
-	cpu					VARCHAR(100)	NOT NULL,
-	gpu					VARCHAR(100)	NOT NULL,
-	ram					VARCHAR(100)	NOT NULL,
-	rom					VARCHAR(100)	NOT NULL,
-	network				VARCHAR(100)	NOT NULL,
-	mother				VARCHAR(100)	NOT NULL,
-	ueffi_bios			VARCHAR(100)	NOT NULL,
+	ID_ARCH				INT				,
+	name_				TEXT			,
+	OS_type				VARCHAR(100)	,
+	upd_version			VARCHAR(100)	,
+	time_usage			INT				,
+	cpu					VARCHAR(100)	,
+	gpu					VARCHAR(100)	,
+	ram					VARCHAR(100)	,
+	rom					VARCHAR(100)	,
+	network				VARCHAR(100)	,
+	mother				VARCHAR(100)	,
+	ueffi_bios			VARCHAR(100)	,
 	FOREIGN KEY(ID_ARCH) REFERENCES Architecture(ID_ARCH)
 );
 
 CREATE TABLE IF NOT EXISTS InfectReg(
 	ID_MAIN				SERIAL				PRIMARY KEY NOT NULL,
-	ID_V				INT				NOT NULL,
-	ID_SYS				INT				NOT NULL,
+	ID_V				INT				,
+	ID_SYS				INT				,
 	time_				DATE			NOT NULL,
-	damage_				VARCHAR(100)	NOT NULL,
-	user_				VARCHAR(100)	NOT NULL,
+	damage_				INT				NOT NULL,
+	user_				VARCHAR(50)		NOT NULL,
 	FOREIGN KEY(ID_V) REFERENCES Virus(ID_V),
 	FOREIGN KEY(ID_SYS) REFERENCES System_(ID_SYS)
 );
 
 CREATE TABLE IF NOT EXISTS Setup(
-	ID_SET				INT				PRIMARY KEY NOT NULL,
-	ID_SYS				INT				NOT NULL,
-	ID_P				INT				NOT NULL,
+	ID_SET				SERIAL			PRIMARY KEY NOT NULL,
+	ID_SYS				INT				,
+	ID_P				INT				,
 	FOREIGN KEY(ID_SYS) REFERENCES System_(ID_SYS),
 	FOREIGN KEY(ID_P) REFERENCES Protection(ID_P)
 );
@@ -254,10 +288,12 @@ VALUES
 ('Test release');
 */
 --SELECT * FROM UpdateVersion
+
 CREATE TABLE IF NOT EXISTS CPU(
 	ID_				SERIAL				PRIMARY KEY,
 	name_ VARCHAR(100)
 ); --temporary table
+
 /*
 INSERT INTO CPU(name_) 
 VALUES
@@ -266,12 +302,12 @@ VALUES
 ('AMD Ryzen 5 3600'),
 ('AMD Ryzen 7 1700'),
 ('AMD Ryzen 7 2700'),
-('AMD Ruzen 7 3700'),
+('AMD Ryzen 7 3700'),
 ('AMD Ryzen 7 3800'),
 ('AMD Ryzen 9 3900'),
 ('AMD Ryzen 9 3950'),
-('AMD Ruzen 7 3700X'),
-('AMD Ruzen 7 3800X'),
+('AMD Ryzen 7 3700X'),
+('AMD Ryzen 7 3800X'),
 ('AMD Ryzen 9 3900X'),
 ('AMD Ryzen 9 3950X'),
 ('AMD Ryzen Threadripper 3960X'),
@@ -288,6 +324,368 @@ VALUES
 ('AMD EPYC 7352');
 */
 --SELECT * FROM CPU
+CREATE TABLE IF NOT EXISTS GPU(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO GPU(name_) 
+VALUES
+('NVIDIA GTX 1050'),
+('NVIDIA GTX 1050 Ti'),
+('NVIDIA GTX 1060'),
+('NVIDIA GTX 1060 Ti'),
+('NVIDIA GTX 1070 Ti'),
+('NVIDIA GTX 1080'),
+('NVIDIA GTX 1080 Ti'),
+('NVIDIA GTX 1650'),
+('NVIDIA GTX 1650 Super'),
+('NVIDIA GTX 1660'),
+('NVIDIA GTX 1660 Super'),
+('NVIDIA GTX 1660 Ti'),
+('NVIDIA RTX 2060'),
+('NVIDIA RTX 2060 Super'),
+('NVIDIA RTX 2070'),
+('NVIDIA RTX 2070 Super'),
+('NVIDIA RTX 2080'),
+('NVIDIA RTX 2080 Super'),
+('NVIDIA RTX 2080 Ti'),
+('NVIDIA Titan RTX'),
+('NVIDIA Tesla V100'),
+('NVIDIA Tesla K20'),
+('NVIDIA Tesla K40'),
+('AMD RADEON VII');
+INSERT INTO GPU(name_) VALUES('AMD Embedded RADEON E9260 MXM Module');
+*/
+--SELECT * FROM GPU
+
+CREATE TABLE IF NOT EXISTS RAM(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO RAM(name_)
+VALUES
+('4 Gb'),
+('8 Gb'),
+('16 Gb'),
+('32 Gb'),
+('64 Gb'),
+('128 Gb'),
+('256 Gb'),
+('512 Gb'),
+('1 Tb');
+INSERT INTO RAM(name_) VALUES ('2 Tb');
+*/
+--SELECT * FROM RAM
+CREATE TABLE IF NOT EXISTS ROM(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO ROM(name_)
+VALUES
+('128 Gb SSD + 512 Gb HDD'),
+('256 Gb SSD + 1 Tb HDD'),
+('512 Gb SSD + 1 Tb HDD'),
+('512 Gb SSD + 2 Tb HDD'),
+('1 Tb SSD + 1 Tb HDD'),
+('1 Tb SSD + 2 Tb HDD'),
+('2 Tb SSD + 4 Tb HDD'),
+('2 Tb SSD + 8 Tb HDD'),
+('4 Tb SSD + 16 Tb HDD'),
+('4 Tb SSD + 32 Tb HDD');
+*/
+--SELECT * FROM ROM;
+CREATE TABLE IF NOT EXISTS Network(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO Network(name_)
+VALUES
+('WiFi 5 + Bluetooth 4.2'),
+('WiFi 5 + Bluetooth 5.0'),
+('WiFi 5 + Bluetooth 5.1'),
+('WiFi 5 + Bluetooth 5.2'),
+('Ethernet Gigabit LAN'),
+('WiFi 6 + Bluetooth 4.2'),
+('WiFi 6 + Bluetooth 5.0'),
+('WiFi 6 + Bluetooth 5.1'),
+('WiFi 6 + Bluetooth 5.2'),
+('None');
+*/
+--SELECT * FROM Network
+
+CREATE TABLE IF NOT EXISTS Mother(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO Mother(name_) VALUES
+('AT'),
+('ATX'),
+('LPX'),
+('NLX'),
+('Baby-AT'),
+('Mini-ATX'),
+('microATX'),
+('microNLX'),
+('Unknown'),
+('Mobile stand');
+*/
+--SELECT * FROM Mother;
+
+CREATE TABLE IF NOT EXISTS BIOSver(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO BIOSver(name_)
+VALUES
+('Stable'),
+('Beta'),
+('Protected'),
+('OEM'),
+('Up to date');
+*/
+--SELECT * FROM BIOSver;
+
+--DROP TABLE System_ CASCADE
+--SELECT * FROM System_
+
+--SELECT * FROM OS TABLESAMPLE SYSTEM ((1 * 100) / 5100.0);
+--SELECT * FROM OS TABLESAMPLE BERNOULLI ((1 * 100) / 5100.0);
+--SELECT * FROM f_random_sample(1,1.05);
+--SELECT name_ FROM OS
+--SELECT name_ FROM OS ORDER BY random() LIMIT 1; --this works
+
+
+--ADDING TO System_
+/*
+DO
+$do$
+BEGIN
+FOR I IN 1..1000 LOOP
+	INSERT INTO System_(ID_ARCH)
+	SELECT trunc(random() * 4 + 1);
+
+	UPDATE System_
+	SET name_ = md5(random()::TEXT),
+	OS_type = subquery.name_
+	FROM (SELECT name_ FROM OS ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET upd_version = subquery.name_
+	FROM (SELECT name_ FROM UpdateVersion ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET time_usage = trunc(random() * 1000 + 100),
+	cpu = subquery.name_
+	FROM (SELECT name_ FROM CPU ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+	
+	UPDATE System_
+	SET gpu = subquery.name_
+	FROM (SELECT name_ FROM GPU ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET ram = subquery.name_
+	FROM (SELECT name_ FROM RAM ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET rom = subquery.name_
+	FROM (SELECT name_ FROM ROM ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET network = subquery.name_
+	FROM (SELECT name_ FROM Network ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET mother = subquery.name_
+	FROM (SELECT name_ FROM Mother ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+
+	UPDATE System_
+	SET ueffi_bios = subquery.name_
+	FROM (SELECT name_ FROM BIOSver ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SYS = I;
+END LOOP;
+END
+$do$;
+*/
+CREATE UNIQUE INDEX IF NOT EXISTS SysName ON System_ (name_);
+CREATE INDEX IF NOT EXISTS SysArch ON System_ (ID_ARCH);
+--SELECT * FROM System_
+
+--DROP TABLE Virus CASCADE
+CREATE TABLE IF NOT EXISTS Environment(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO Environment(name_)
+VALUES
+('Files'),
+('Boot sectors'),
+('Macrovirus'),
+('Network'),
+('Source codes');
+*/
+--SELECT * FROM Environment;
+
+CREATE TABLE IF NOT EXISTS Algorithm(
+	ID_				SERIAL				PRIMARY KEY,
+	name_ VARCHAR(100)
+); --temporary table
+/*
+INSERT INTO Algorithm(name_)
+VALUES
+('Companion virus'),
+('Worm'),
+('Parasite virus'),
+('Student virus'),
+('Stels virus'),
+('Macro virus'),
+('Net virus');
+*/
+--SELECT * FROM Algorithm
+
+--ADDING TO Virus
+/*
+DO
+$do$
+BEGIN
+FOR I IN 1..1000 LOOP
+	INSERT INTO Virus(name_, polymorphism, metamorphism, danger_lvl)
+	VALUES(md5(random()::TEXT), trunc(random() * 1 + 0), trunc(random() * 1 + 0), trunc(random() * 5 + 0));
+
+	UPDATE Virus
+	SET environment = subquery.name_
+	FROM (SELECT name_ FROM Environment ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_V = I;
+
+	UPDATE Virus
+	SET type_of_algorithm = subquery.name_
+	FROM (SELECT name_ FROM Algorithm ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_V = I;
+	
+END LOOP;
+END
+$do$;
+*/
+--SELECT * FROM Virus
+CREATE UNIQUE INDEX IF NOT EXISTS VirusName ON Virus (name_);
+
+--ADDING TO InfectReg takes time
+/*
+DO
+$do$
+BEGIN
+FOR I IN 1..200000 LOOP
+	INSERT INTO InfectReg(time_, user_, damage_)
+	VALUES(timestamp '2014-01-10 20:00:00' +
+       random() * (timestamp '2014-01-20 20:00:00' -
+                   timestamp '2014-01-10 10:00:00'), md5(random()::TEXT), trunc(random() * 100 + 0));
+
+	UPDATE InfectReg
+	SET ID_V = subquery.ID_V	
+	FROM (SELECT ID_V FROM Virus ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_MAIN = I;
+	
+	UPDATE InfectReg
+	SET ID_SYS = subquery.ID_SYS
+	FROM (SELECT ID_SYS FROM System_ ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_MAIN = I;
+	
+END LOOP;
+END
+$do$;
+*/
+--SELECT * FROM InfectReg
+CREATE INDEX IF NOT EXISTS SysReg ON InfectReg (ID_SYS);
+CREATE INDEX IF NOT EXISTS VirusReg ON InfectReg (ID_V);
+--ADDING TO Setup and Dicts
+/*
+DO
+$do$
+BEGIN
+FOR I IN 1..1000 LOOP
+	INSERT INTO Setup(ID_SET)
+	VALUES
+	(I);
+	
+	INSERT INTO InfectStratMany(ID_VS)
+	VALUES
+	(I);
+	
+	INSERT INTO InfectWayMany(ID_VI)
+	VALUES
+	(I);
+	
+	INSERT INTO DisgWayMany(ID_VD)
+	VALUES
+	(I);
+	
+	UPDATE Setup
+	SET ID_SYS = subquery.ID_SYS	
+	FROM (SELECT ID_SYS FROM System_ ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SET = I;
+	
+	UPDATE Setup
+	SET ID_P = subquery.ID_P
+	FROM (SELECT ID_P FROM Protection ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_SET = I;
+	
+	UPDATE InfectStratMany
+	SET ID_V = subquery.ID_V
+	FROM (SELECT ID_V FROM Virus ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_VS = I;
+	
+	UPDATE InfectStratMany
+	SET ID_S = subquery.ID_S
+	FROM (SELECT ID_S FROM InfectStratDict ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_VS = I;
+	
+	UPDATE InfectWayMany
+	SET ID_V = subquery.ID_V
+	FROM (SELECT ID_V FROM Virus ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_VI = I;
+	
+	UPDATE InfectWayMany
+	SET ID_I = subquery.ID_I
+	FROM (SELECT ID_I FROM InfectWayDict ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_VI = I;
+	
+	UPDATE DisgWayMany
+	SET ID_V = subquery.ID_V
+	FROM (SELECT ID_V FROM Virus ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_VD = I;
+	
+	UPDATE DisgWayMany
+	SET ID_D = subquery.ID_D
+	FROM (SELECT ID_D FROM DisgWayDict ORDER BY random() LIMIT 1) AS subquery
+	WHERE ID_VD = I;
+	
+END LOOP;
+END
+$do$;
+*/
+CREATE INDEX IF NOT EXISTS SysProt ON Setup (ID_SYS, ID_P);
+CREATE INDEX IF NOT EXISTS VirusStrat ON InfectStratMany (ID_V, ID_S);
+CREATE INDEX IF NOT EXISTS VirusWay ON InfectWayMany (ID_V, ID_I);
+CREATE INDEX IF NOT EXISTS VirusDisg ON DisgWayMany (ID_V, ID_D);
+--SELECT * FROM Setup
+--SELECT * FROM InfectStratMany;
+--SELECT * FROM InfectWayMany;
+--SELECT * FROM DisgWayMany;
+
 
 
 
