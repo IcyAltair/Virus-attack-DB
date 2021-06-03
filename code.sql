@@ -681,10 +681,119 @@ CREATE INDEX IF NOT EXISTS SysProt ON Setup (ID_SYS, ID_P);
 CREATE INDEX IF NOT EXISTS VirusStrat ON InfectStratMany (ID_V, ID_S);
 CREATE INDEX IF NOT EXISTS VirusWay ON InfectWayMany (ID_V, ID_I);
 CREATE INDEX IF NOT EXISTS VirusDisg ON DisgWayMany (ID_V, ID_D);
+--SELECT * FROM System_
 --SELECT * FROM Setup
 --SELECT * FROM InfectStratMany;
 --SELECT * FROM InfectWayMany;
 --SELECT * FROM DisgWayMany;
+
+--1) найти вирусы, которые заражают системы с архитектурой А способом В и для которых применяется механизм С
+/*
+EXPLAIN ANALYZE SELECT InfectReg.ID_V, System_.ID_ARCH, InfectWayMany.ID_I, Protection.ID_MECH
+FROM InfectReg
+JOIN System_ ON System_.ID_SYS = InfectReg.ID_SYS
+JOIN InfectWayMany on InfectWayMany.ID_V = InfectReg.ID_V
+JOIN Setup on Setup.ID_SYS = InfectReg.ID_SYS
+JOIN Protection on Protection.ID_P = Setup.ID_P
+WHERE
+	System_.ID_ARCH = '3' AND
+	InfectWayMany.ID_I = '2' AND
+	Protection.ID_MECH = '1';
+*/
+--2) посчитать количество систем зараженных вирусом А способом В
+/*
+EXPLAIN ANALYZE SELECT COUNT(InfectReg.ID_SYS)
+FROM InfectReg JOIN InfectWayMany ON InfectReg.ID_V = InfectWayMany.ID_V
+WHERE
+InfectReg.ID_V = '777' AND
+InfectWayMany.ID_I = '2';
+*/
+--3а)найти вирусы, заражавшие системы наибольшее число раз
+/*
+EXPLAIN ANALYZE WITH RES AS (SELECT COUNT(InfectReg.ID_MAIN) AS infect_count
+	FROM InfectReg
+	GROUP BY InfectReg.ID_V
+	ORDER BY infect_count DESC
+	LIMIT 1)
+SELECT COUNT(InfectReg.ID_MAIN), InfectReg.ID_V
+FROM InfectReg
+GROUP BY InfectReg.ID_V
+HAVING COUNT(InfectReg.ID_MAIN) = (SELECT infect_count FROM RES);
+*/
+--3б) найти вирусы, заражавшие системы наименьшее число раз
+/*
+EXPLAIN ANALYZE WITH RES AS (SELECT COUNT(InfectReg.ID_MAIN) AS infect_count
+	FROM InfectReg
+	GROUP BY InfectReg.ID_V
+	ORDER BY infect_count
+	LIMIT 1)
+SELECT COUNT(InfectReg.ID_MAIN), InfectReg.ID_V
+FROM InfectReg
+GROUP BY InfectReg.ID_V
+HAVING COUNT(InfectReg.ID_MAIN) = (SELECT infect_count FROM RES);
+*/
+--4) найти системы, которые заражались чаще, чем система А
+/*
+EXPLAIN ANALYZE SELECT DISTINCT InfectReg.ID_SYS
+FROM InfectReg
+JOIN (
+	SELECT COUNT(ID_MAIN) AS infect_count, ID_SYS
+	FROM InfectReg
+	GROUP BY ID_SYS
+	) as t2
+ON InfectReg.ID_SYS = t2.ID_SYS
+WHERE t2.infect_count >
+(
+	SELECT COUNT(ID_MAIN)
+	FROM InfectReg
+	GROUP BY ID_SYS
+	HAVING ID_SYS = '777'
+);
+*/
+--5) посчитать число систем с одинаковым числом заражений (гистограмма)
+/*
+--EXPLAIN ANALYZE 
+SELECT COUNT(*) AS sys_count, t2.infct_count
+FROM InfectReg
+JOIN (
+	SELECT COUNT(*) AS infct_count, ID_SYS
+	FROM InfectReg
+	GROUP By ID_SYS) AS t2
+ON InfectReg.ID_SYS = t2.ID_SYS
+GROUP BY t2.infct_count;
+*/
+--6) посчитать число заражений каждым механизмом (гистограмма)
+/*
+--EXPLAIN ANALYZE 
+SELECT COUNT(*) AS infect_count, Protection.ID_MECH as ID_MECH
+FROM InfectReg
+JOIN Setup ON Setup.ID_SYS = InfectReg.ID_SYS
+JOIN Protection ON Protection.ID_P = Setup.ID_P
+GROUP BY Protection.ID_MECH;
+*/
+--7) найти вирус, который не заразил ни одной системы способом А
+/*
+EXPLAIN ANALYZE WITH temp_table AS (SELECT InfectReg.ID_V, InfectReg.ID_SYS, InfectWayMany.ID_I
+FROM InfectReg
+JOIN InfectWayMany ON InfectWayMany.ID_V = InfectReg.ID_V)
+SELECT ID_V, ID_SYS, ID_I
+FROM temp_table
+WHERE ID_I != '1';
+*/
+--8) для каждой архитектуры посчитать число заражений на каждый механизм (3D диаграмма???)
+/*
+EXPLAIN ANALYZE SELECT System_.ID_ARCH, Protection.ID_MECH, COUNT(InfectReg.ID_MAIN)
+FROM InfectReg
+JOIN System_ ON System_.ID_SYS = InfectReg.ID_SYS
+JOIN Setup ON Setup.ID_SYS = InfectReg.ID_SYS
+JOIN Protection on Protection.ID_P = Setup.ID_P
+GROUP BY System_.ID_ARCH, Protection.ID_MECH;
+*/
+
+
+
+
+
 
 
 
